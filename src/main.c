@@ -6,6 +6,7 @@
 #define LED2 16 // LED2 is on P1.6
 #define PUMP 14 // fridge pump is on P1.4
 #define DHT1 15 // fridge sensor on P1.5
+#define DHT2 17 // ambient sensor on P1.7
 
 #define HEATING 0
 #define COOLING 1
@@ -15,6 +16,7 @@
 #define MIN_TEMP DESIRED_TEMP - 11
 
 dht fridge;
+dht ambient;
 int mode;
 
 // This function is called once when your program starts.
@@ -24,9 +26,13 @@ void setup(void) {
   pinMode(LED1, OUTPUT); // set LED1 to an output
   pinMode(LED2, OUTPUT); // set LED2 to an output
   pinMode(PUMP, OUTPUT); // set fridge to an output
+  pinMode(DHT1, INPUT); // set fridge to an output
+  pinMode(DHT2, INPUT); // set fridge to an output
 
   dhtInit(&fridge, DHT1);
   dhtSetup(&fridge);
+  dhtInit(&ambient, DHT2);
+  dhtSetup(&ambient);
 
   digitalWrite(PUMP, LOW);
   digitalWrite(LED1, LOW);
@@ -66,16 +72,24 @@ void loop(void) {
 
   on();
   wdt_enable();
-  switch(dhtRead(&fridge)) {
-    case DHT_OK:
-      break;
-    default:
-      digitalWrite(LED1, HIGH);
-      return;
+
+  if(DHT_OK != dhtRead(&fridge)) {
+    digitalWrite(LED1, HIGH);
+    return;
   }
+
+  if(DHT_OK != dhtRead(&ambient)) {
+    digitalWrite(LED1, HIGH);
+    return;
+  }
+
   wdt_disable();
   off();
 
+  portTx(ambient.rhIntegral);
+  portTx(ambient.rhDecimal);
+  portTx(ambient.tIntegral);
+  portTx(ambient.tDecimal);
   portTx(fridge.rhIntegral);
   portTx(fridge.rhDecimal);
   portTx(fridge.tIntegral);
