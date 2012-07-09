@@ -11,7 +11,7 @@
 #define HEATING 0
 #define COOLING 1
 
-#define DESIRED_TEMP 211
+#define DESIRED_TEMP 200
 #define MAX_TEMP DESIRED_TEMP + 11
 #define MIN_TEMP DESIRED_TEMP - 11
 
@@ -83,9 +83,6 @@ void loop(void) {
     return;
   }
 
-  wdt_disable();
-  off();
-
   portTx(ambient.rhIntegral);
   portTx(ambient.rhDecimal);
   portTx(ambient.tIntegral);
@@ -95,6 +92,9 @@ void loop(void) {
   portTx(fridge.tIntegral);
   portTx(fridge.tDecimal);
   portTx('\n');
+
+  wdt_disable();
+  off();
 
   fridge_temp = (fridge.tIntegral << 8) + fridge.tDecimal;
 
