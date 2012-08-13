@@ -40,7 +40,7 @@ void setup(void) {
 
   mode = HEATING;
 
-  delaySeconds(10); /* Let the sensor stabilize. */
+  delaySeconds(1); /* Let the sensor stabilize. */
   portInit(0);
 
   __enable_interrupt();
