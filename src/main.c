@@ -4,9 +4,9 @@
 
 #define LED1 10 // LED1 is on P1.0
 #define LED2 16 // LED2 is on P1.6
-#define PUMP 14 // fridge pump is on P1.4
 #define DHT1 15 // fridge sensor on P1.5
-#define DHT2 17 // ambient sensor on P1.7
+#define RED LED1
+#define GREEN LED2
 
 #define HEATING 0
 #define COOLING 1
@@ -19,43 +19,6 @@ dht fridge;
 dht ambient;
 int mode;
 
-// This function is called once when your program starts.
-void setup(void) {
-  wdt_disable(); // disable the watchdog timer
-
-  pinMode(LED1, OUTPUT); // set LED1 to an output
-  pinMode(LED2, OUTPUT); // set LED2 to an output
-  pinMode(PUMP, OUTPUT); // set fridge to an output
-  pinMode(DHT1, INPUT); // set fridge to an output
-  pinMode(DHT2, INPUT); // set fridge to an output
-
-  dhtInit(&fridge, DHT1);
-  dhtSetup(&fridge);
-  dhtInit(&ambient, DHT2);
-  dhtSetup(&ambient);
-
-  digitalWrite(PUMP, LOW);
-  digitalWrite(LED1, LOW);
-  digitalWrite(LED2, LOW);
-
-  mode = HEATING;
-
-  delaySeconds(1); /* Let the sensor stabilize. */
-  portInit(0);
-
-  __enable_interrupt();
-}
-
-void red(void) {
-  digitalWrite(LED1, HIGH);
-  digitalWrite(LED2, LOW);
-}
-
-void green(void) {
-  digitalWrite(LED1, LOW);
-  digitalWrite(LED2, HIGH);
-}
-
 void off(void) {
   digitalWrite(LED1, LOW);
   digitalWrite(LED2, LOW);
@@ -66,62 +29,64 @@ void on(void) {
   digitalWrite(LED2, HIGH);
 }
 
+// This function is called once when your program starts.
+void setup(void) {
+  wdt_disable(); // disable the watchdog timer
+
+  pinMode(LED1, OUTPUT); // set LED1 to an output
+  pinMode(LED2, OUTPUT); // set LED2 to an output
+  pinMode(DHT1, INPUT); // set fridge to an output
+  on();
+
+  dhtInit(&fridge, DHT1);
+  dhtSetup(&fridge);
+
+  digitalWrite(LED1, LOW);
+  digitalWrite(LED2, LOW);
+
+  delaySeconds(1); /* Let the sensor stabilize. */
+  portInit(0);
+
+  __enable_interrupt();
+  portTx(0);
+  portTx(0);
+  portTx(0);
+  portTx(0);
+  portTx('\n');
+  off();
+}
+
+void green(void) { digitalWrite(GREEN, HIGH); }
+void red(void)   { digitalWrite(RED, HIGH); }
+
+#define WRITE_TEMP(a, b, c, d) \
+  portTx(a); \
+  portTx(b); \
+  portTx(c); \
+  portTx(d); \
+  portTx('\n'); \
+
 // This function is called over and over in an infinite loop.
 void loop(void) {
-  int fridge_temp;
+  int read;
 
-  on();
+  green();
+
   wdt_enable();
-
-  if(DHT_OK != dhtRead(&fridge)) {
-    digitalWrite(LED1, HIGH);
-    return;
-  }
-
-  if(DHT_OK != dhtRead(&ambient)) {
-    digitalWrite(LED1, HIGH);
-    return;
-  }
-
-  portTx(ambient.rhIntegral);
-  portTx(ambient.rhDecimal);
-  portTx(ambient.tIntegral);
-  portTx(ambient.tDecimal);
-  portTx(fridge.rhIntegral);
-  portTx(fridge.rhDecimal);
-  portTx(fridge.tIntegral);
-  portTx(fridge.tDecimal);
-  portTx('\n');
-
+  read = dhtRead(&fridge);
   wdt_disable();
-  off();
 
-  fridge_temp = (fridge.tIntegral << 8) + fridge.tDecimal;
-
-  switch(mode) {
-    case COOLING:
-      if (fridge_temp <= MIN_TEMP) {
-        // Fridge is too cold, need to heat
-        mode = HEATING;
-        digitalWrite(PUMP, LOW);
-        red();
-      } else {
-        // Currently cooling
-        green();
-      }
-      break;
-    case HEATING:
-      if (fridge_temp >= MAX_TEMP) {
-        // Fridge is too hot, need to cool
-        mode = COOLING;
-        digitalWrite(PUMP, HIGH);
-        green();
-      } else {
-        // Currently heating
-        red();
-      }
-      break;
+  if(DHT_OK == read) {
+    WRITE_TEMP(fridge.rhIntegral,
+               fridge.rhDecimal,
+               fridge.tIntegral,
+               fridge.tDecimal);
+  } else {
+    red();
+    WRITE_TEMP(99, 99, 99, 99);
   }
+
+  off();
 
   delaySeconds(2);
 }
