@@ -71,16 +71,16 @@
 
       var source = new EventSource('/stream.json');
 
-      source.addEventListener('message', function(e) {
-        var tempdata = JSON.parse(e.data);
+      var tempdata = [0, 0];
 
+      function tick() {
         // update the domains
         now = new Date();
         x.domain([now - (n - 2) * duration, now - duration]);
         y.domain([0, d3.max(data)]);
 
         // push the accumulated count onto the back, and reset the count
-        data.push(Math.min(30, tempdata[0]));
+        data.push(tempdata[0]);
 
         // redraw the line
         svg.select(".line")
@@ -97,11 +97,19 @@
         path.transition()
             .duration(duration)
             .ease("linear")
-            .attr("transform", "translate(" + x(now - (n - 1) * duration) + ")");
+            .attr("transform", "translate(" + x(now - (n - 1) * duration) + ")")
+            .each("end", tick);
 
         // pop the old data point off the front
         data.shift();
+      }
+
+      source.addEventListener('message', function(e) {
+        tempdata = JSON.parse(e.data);
+
       }, false);
+
+      tick();
     });
   </script>
   </head>

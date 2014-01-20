@@ -16,7 +16,7 @@ server.mount_proc '/stream.json' do |req, res|
         wr.close
         break
       end
-      sleep 1
+      sleep 2
     end
   }
   res['Content-Type'] = 'text/event-stream'
@@ -24,6 +24,6 @@ server.mount_proc '/stream.json' do |req, res|
   res.chunked = true
 end
 
-trap 'INT' do server.shutdown end
+trap 'INT' do exit! end
 
 server.start
